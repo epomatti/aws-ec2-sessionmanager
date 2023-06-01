@@ -60,12 +60,38 @@ resource "aws_default_security_group" "default" {
   vpc_id = aws_vpc.main.id
 }
 
+### SECURITY GROUP ###
+
+resource "aws_security_group" "ssm" {
+  name        = "ec2-sessionmanager-jumpserver"
+  description = "Controls access for EC2 via Session Manager"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "sg-sessionmanager-jumpserver"
+  }
+}
+
 
 ### JUMP SERVER ###
 
 resource "aws_network_interface" "jumpserver" {
-  subnet_id = aws_subnet.private.id
-  # security_groups = [aws_security_group.private.id]
+  subnet_id       = aws_subnet.private.id
+  security_groups = [aws_security_group.ssm.id]
 
   tags = {
     Name = "ni-sessionmanager-jumpserver"
