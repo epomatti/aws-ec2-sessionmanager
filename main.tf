@@ -116,6 +116,11 @@ resource "aws_instance" "jumpserver" {
     device_index         = 0
   }
 
+  network_interface {
+    network_interface_id = aws_network_interface.jumpserver_public.id
+    device_index         = 1
+  }
+
   lifecycle {
     ignore_changes = [ami]
   }
@@ -152,4 +157,46 @@ data "aws_iam_policy" "AmazonSSMManagedInstanceCore" {
 resource "aws_iam_role_policy_attachment" "ssm-managed-instance-core" {
   role       = aws_iam_role.jumpserver.name
   policy_arn = data.aws_iam_policy.AmazonSSMManagedInstanceCore.arn
+}
+
+### PUBLIC ###
+
+resource "aws_network_interface" "jumpserver_public" {
+  subnet_id       = aws_subnet.public.id
+  security_groups = [aws_security_group.ssm.id]
+
+  tags = {
+    Name = "ni-public-sessionmanager-jumpserver"
+  }
+}
+
+resource "aws_route_table" "public" {
+  vpc_id = aws_vpc.main.id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.main.id
+  }
+
+  tags = {
+    Name = "rt-public-sessionmanager-jumpserver"
+  }
+}
+
+resource "aws_subnet" "public" {
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = "10.0.1.0/24"
+  availability_zone = var.ec2_az
+
+  # Auto-assign public IPv4 address
+  map_public_ip_on_launch = true
+
+  tags = {
+    Name = "subnet-public-sessionmanager-jumpserver"
+  }
+}
+
+resource "aws_route_table_association" "public" {
+  subnet_id      = aws_subnet.public.id
+  route_table_id = aws_route_table.public.id
 }
